@@ -1,0 +1,14 @@
+""" __summary__
+
+    Args:
+        arg (__type__): __description__
+
+    Raises:
+        __Exception__: __description__
+
+    Yields:
+        __Generator__: __description__
+
+    Returns:
+        __Returned_type__: __description__
+"""

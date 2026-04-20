@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+#Tests
+.coverage
+coverage.xml
+report.html
+htmlcov
+.pytest_cache
+
+# Linters / Refactoring tools
+.ruff_cache
+.ropeproject
+
+# binaries
+*.mo

@@ -1,0 +1,51 @@
+name: Update Dependencies
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Capture old lockfile
+        run: cp uv.lock /tmp/uv.lock.old
+
+      - name: Update dependencies
+        run: |
+          uv lock --upgrade
+          uv sync --upgrade
+
+      - name: Generate summary
+        run: |
+          python3 .github/scripts/gen_changelog.py /tmp/uv.lock.old uv.lock dependency-summary.txt
+
+      - name: Read summary for PR body
+        id: summary
+        run: |
+          SUMMARY=$(cat dependency-summary.txt)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Clean up temporary files
+        run: |
+          rm -f dependency-summary.txt
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          commit-message: "chore: update dependencies"
+          branch: deps-update-${{ github.run_id }}
+          title: "Update dependencies"
+          body: ${{ steps.summary.outputs.content }}

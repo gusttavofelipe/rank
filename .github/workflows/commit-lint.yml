@@ -1,0 +1,26 @@
+# TODO: update script to run in push as well
+name: Semantic Commit Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+jobs:
+  semantic_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Run semantic commit check
+        run: python .github/scripts/commit_lint.py

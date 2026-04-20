@@ -1,0 +1,15 @@
+
+enhance and use:
+    Pytest
+    Kafka - soon
+    Event-driven architecture
+    OpenTelemetry / Grafana: observablity ✔
+    semantic-release
+    Locust: load testing / stress test
+    Internationalization & Localization ✔
+    Cache
+    Query optimization and N+1 problem
+    SQL & SQLAlchemy
+    Feature flags
+    Rate limiter
+    Redis

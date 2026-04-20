@@ -1,0 +1,38 @@
+# Translations template for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-12-03 15:40-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: app/core/exceptions/db.py:10
+msgid "An error occurred while trying to connect to the database"
+msgstr ""
+
+#: app/core/exceptions/db.py:17
+msgid "A database operation error has occurred"
+msgstr ""
+
+#: app/core/exceptions/db.py:23
+msgid "Object Not Found"
+msgstr ""
+
+#: app/core/exceptions/db.py:29
+msgid "Objtect already exists"
+msgstr ""
+
+#: app/domain/usecases/example.py:56
+msgid "SQLAlchemy error occurred"
+msgstr ""
