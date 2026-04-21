@@ -49,7 +49,7 @@ class AuthUsecase:
 		try:
 			async with self.user_repository.transaction() as transaction:
 				user = UserModel(
-					**data.model_dump(exclude={"password"}),
+					**data.model_dump(mode="json", exclude={"password"}),
 					password_hash=hash_password(password=data.password),
 					role=UserRoleEnum.REVIEWER,
 				)

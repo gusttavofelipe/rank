@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.category import router as category_router
+from app.api.v1.routers.user import router as user_router
 from app.core.config import settings
 from app.core.exceptions.db import DatabaseConnectionError
 from app.core.exceptions.handler import register_exception_handlers
@@ -55,7 +56,7 @@ class App(FastAPI):
 
 	def __register_exception_handlers(self) -> None:
 		"""Registers all mapped exception handlers for the application."""
-		register_exception_handlers(self)
+		register_exception_handlers(app=self)
 
 	def __add_middlewares(self) -> None:
 		"""Includes all predefined API middlewares into the application.
@@ -64,13 +65,14 @@ class App(FastAPI):
 		one added is the outermost wrapper.  RequestContextMiddleware should be
 		outermost so request_id is available to every subsequent layer.
 		"""
-		self.add_middleware(LanguageMiddleware)
-		self.add_middleware(RequestContextMiddleware)
+		self.add_middleware(middleware_class=LanguageMiddleware)
+		self.add_middleware(middleware_class=RequestContextMiddleware)
 
 	def __include_routers(self) -> None:
 		"""Includes all predefined API routers into the application."""
 		self.include_router(router=auth_router)
 		self.include_router(router=category_router)
+		self.include_router(router=user_router)
 
 
 app: FastAPI = App()

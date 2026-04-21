@@ -48,14 +48,14 @@ class UserRepository(PostgresRepository[UserModel]):
 		transaction: Transaction[UserModel],
 	) -> UserModel | None:
 		base_query = spec.apply(select(UserModel))
-		update_data = data.model_dump(exclude_unset=True)
+		update_data = data.model_dump(mode="json", exclude_unset=True)
 
 		if not update_data:
 			return None
 
 		clause = base_query.whereclause
 		if clause is None:
-			return None
+			return
 
 		stmt = (
 			update(UserModel)
