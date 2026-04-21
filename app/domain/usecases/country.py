@@ -40,9 +40,11 @@ class CountryUsecase:
 				)
 				await transaction.flush()
 				return CountryResponseSchema.model_validate(country)
-		except IntegrityError:
+		except IntegrityError as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise ObjectAlreadyExistError
-		except SQLAlchemyError:
+		except SQLAlchemyError as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def partial_update(
@@ -61,10 +63,10 @@ class CountryUsecase:
 					return CountryResponseSchema.model_validate(country)
 			raise ObjectNotFound
 		except IntegrityError as exc:
-			logger.error(f"Integrity error: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def get_by_id(self, id: uuid.UUID) -> CountryResponseSchema:
@@ -75,9 +77,11 @@ class CountryUsecase:
 			if not country:
 				raise ObjectNotFound
 			return CountryResponseSchema.model_validate(country)
-		except ObjectNotFound:
+		except ObjectNotFound as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise
-		except SQLAlchemyError:
+		except SQLAlchemyError as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def get_by_code(self, code: str) -> CountryResponseSchema:
@@ -88,19 +92,20 @@ class CountryUsecase:
 			if not country:
 				raise ObjectNotFound
 			return CountryResponseSchema.model_validate(country)
-		except ObjectNotFound:
+		except ObjectNotFound as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise
-		except SQLAlchemyError:
+		except SQLAlchemyError as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
-	async def list(self, name: str | None = None) -> list[CountryResponseSchema]:
+	async def list(self, name: str = "") -> list[CountryResponseSchema]:
 		try:
-			spec: Specification[CountryModel] = (
-				CountryByName(name) if name else CountryByName("")
-			)
-			countries: list[CountryModel] = await self.country_repository.list_(spec)
+			spec: Specification[CountryModel] = CountryByName(name)
+			countries: list[CountryModel] = await self.country_repository.list(spec)
 			return [CountryResponseSchema.model_validate(c) for c in countries]
-		except SQLAlchemyError:
+		except SQLAlchemyError as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 

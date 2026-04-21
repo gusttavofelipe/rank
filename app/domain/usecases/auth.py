@@ -57,10 +57,10 @@ class AuthUsecase:
 				await transaction.flush()
 				return UserOutSchema.model_validate(user)
 		except IntegrityError as exc:
-			logger.error(f"IntegrityError in register: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise ObjectAlreadyExistError
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error in register: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def login(self, data: UserLoginSchema) -> tuple[LoginOutSchema, str]:
@@ -100,10 +100,11 @@ class AuthUsecase:
 				tokens=TokenOutSchema(access_token=access_token)
 			), refresh_token_str
 
-		except (InvalidCredentialsError, DBOperationError):
+		except (InvalidCredentialsError, DBOperationError) as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error in login: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def refresh(self, refresh_token_str: str) -> tuple[TokenOutSchema, str]:
@@ -147,10 +148,11 @@ class AuthUsecase:
 
 			return TokenOutSchema(access_token=new_access_token), new_refresh_token_str
 
-		except (TokenRevokedError, InvalidCredentialsError):
+		except (TokenRevokedError, InvalidCredentialsError) as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error in refresh: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def logout(self, refresh_token_str: str) -> None:
@@ -168,7 +170,7 @@ class AuthUsecase:
 					transaction=transaction,
 				)
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error in logout: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def me(self, user: UserModel) -> UserOutSchema:

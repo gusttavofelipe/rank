@@ -41,7 +41,7 @@ async def partial_update(
 	category_id: uuid.UUID,
 	_: CurrentAdmin,
 ) -> CategoryResponseSchema:
-	return await usecase.partial_update(data=data, category_id=category_id)
+	return await usecase.partial_update(data=data, id=category_id)
 
 
 @router.get(
@@ -79,8 +79,8 @@ async def get_by_slug(
 	summary="List categories",
 )
 async def list_categories(
-	usecase: CategoryUsecaseDependency,
 	_: CurrentUser,
-	name: str | None = None,
+	usecase: CategoryUsecaseDependency,
+	name: str = "",
 ) -> list[CategoryResponseSchema]:
 	return await usecase.list(name=name)

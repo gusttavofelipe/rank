@@ -23,23 +23,26 @@ class UserUsecase:
 		self.user_repository: UserRepositoryDependency = user_repository
 
 	async def partial_update(
-		self, data: UserUpdateSchema, user_id: uuid.UUID
+		self, data: UserUpdateSchema, id: uuid.UUID
 	) -> UserOutSchema:
 		try:
 			async with self.user_repository.transaction() as transaction:
 				user: UserModel | None = await self.user_repository.partial_update(
-					spec=UserById(id=user_id),
+					spec=UserById(id=id),
 					data=data,
 					transaction=transaction,
 				)
 				if user is not None:
 					return UserOutSchema.model_validate(user)
 			raise ObjectNotFound
+		except ObjectNotFound as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
+			raise
 		except IntegrityError as exc:
-			logger.error(f"Integrity error: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error in register: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 

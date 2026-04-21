@@ -81,6 +81,6 @@ async def get_by_code(
 async def list_countries(
 	usecase: CountryUsecaseDependency,
 	_: CurrentUser,
-	name: str | None = None,
+	name: str = "",
 ) -> list[CountryResponseSchema]:
 	return await usecase.list(name=name)

@@ -1,5 +1,5 @@
-# app/domain/usecases/category.py
-import inspect
+"""app/domain/usecases/category.py"""
+
 import uuid
 from typing import Annotated
 
@@ -31,9 +31,6 @@ class CategoryUsecase:
 		self.category_repository: CategoryRepositoryDependency = category_repository
 
 	async def create(self, data: CategoryCreateSchema) -> CategoryResponseSchema:
-		method_path: str = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			async with self.category_repository.transaction() as transaction:
 				category: CategoryModel = CategoryModel(**data.model_dump(mode="json"))
@@ -42,22 +39,22 @@ class CategoryUsecase:
 				)
 				await transaction.flush()
 				return CategoryResponseSchema.model_validate(category)
-		except IntegrityError:
+		except IntegrityError as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise ObjectAlreadyExistError
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
-			)
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
+			raise DBOperationError
 
 	async def partial_update(
-		self, data: CategoryUpdateSchema, category_id: uuid.UUID
+		self, data: CategoryUpdateSchema, id: uuid.UUID
 	) -> CategoryResponseSchema:
 		try:
 			async with self.category_repository.transaction() as transaction:
 				category: (
 					CategoryModel | None
 				) = await self.category_repository.partial_update(
-					spec=CategoryById(id=category_id),
+					spec=CategoryById(id=id),
 					data=data,
 					transaction=transaction,
 				)
@@ -65,16 +62,13 @@ class CategoryUsecase:
 					return CategoryResponseSchema.model_validate(category)
 			raise ObjectNotFound
 		except IntegrityError as exc:
-			logger.error(f"Integrity error: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 		except SQLAlchemyError as exc:
-			logger.error(f"SQLAlchemy error: {exc}")
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise DBOperationError
 
 	async def get_by_id(self, id: uuid.UUID) -> CategoryResponseSchema:
-		method_path: str = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			category: CategoryModel | None = await self.category_repository.get(
 				CategoryById(id)
@@ -82,17 +76,14 @@ class CategoryUsecase:
 			if not category:
 				raise ObjectNotFound
 			return CategoryResponseSchema.model_validate(category)
-		except ObjectNotFound:
+		except ObjectNotFound as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
-			)
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
+			raise DBOperationError
 
 	async def get_by_slug(self, slug: str) -> CategoryResponseSchema:
-		method_path: str = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			category: CategoryModel | None = await self.category_repository.get(
 				CategoryBySlug(slug)
@@ -100,17 +91,14 @@ class CategoryUsecase:
 			if not category:
 				raise ObjectNotFound
 			return CategoryResponseSchema.model_validate(category)
-		except ObjectNotFound:
+		except ObjectNotFound as exc:
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
 			raise
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
-			)
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
+			raise DBOperationError
 
 	async def list(self, name: str | None = None) -> list[CategoryResponseSchema]:
-		method_path: str = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			from app.infra.db.specifications.base import Specification
 			from app.infra.db.specifications.category import CategoryByName
@@ -121,9 +109,8 @@ class CategoryUsecase:
 			categories: list[CategoryModel] = await self.category_repository.list_(spec)
 			return [CategoryResponseSchema.model_validate(c) for c in categories]
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
-			)
+			logger.error(f"{exc.__class__.__name__} error: {exc}")
+			raise DBOperationError
 
 
 CategoryUsecaseDependency = Annotated[CategoryUsecase, Depends()]

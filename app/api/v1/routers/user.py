@@ -20,7 +20,5 @@ async def partial_update(
 	data: UserUpdateSchema,
 	current_user: CurrentUser,
 ) -> UserOutSchema:
-	result: UserOutSchema = await usecase.partial_update(
-		data=data, user_id=current_user.id
-	)
+	result: UserOutSchema = await usecase.partial_update(data=data, id=current_user.id)
 	return result

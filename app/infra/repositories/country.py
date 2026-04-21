@@ -61,7 +61,7 @@ class CountryRepository(PostgresRepository[CountryModel]):
 		result: Result[tuple[CountryModel]] = await transaction.session.execute(stmt)
 		return result.scalars().first()
 
-	async def list_(
+	async def list(
 		self,
 		spec: Specification[CountryModel],
 		limit: int = 20,
