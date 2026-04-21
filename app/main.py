@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.category import router as category_router
+from app.api.v1.routers.country import router as country_router
 from app.api.v1.routers.user import router as user_router
 from app.core.config import settings
 from app.core.exceptions.db import DatabaseConnectionError
@@ -73,6 +74,7 @@ class App(FastAPI):
 		self.include_router(router=auth_router)
 		self.include_router(router=category_router)
 		self.include_router(router=user_router)
+		self.include_router(router=country_router)
 
 
 app: FastAPI = App()

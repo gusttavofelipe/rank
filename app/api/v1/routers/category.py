@@ -33,7 +33,7 @@ async def create(
 	"/{id}",
 	response_model=CategoryResponseSchema,
 	status_code=status.HTTP_201_CREATED,
-	summary="Creates a new category (admin only)",
+	summary="Updates a category (admin only)",
 )
 async def partial_update(
 	usecase: CategoryUsecaseDependency,

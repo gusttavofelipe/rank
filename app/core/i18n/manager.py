@@ -2,7 +2,6 @@
 
 from gettext import NullTranslations, translation
 from pathlib import Path
-from typing import Self
 
 from fastapi import Request
 
@@ -15,12 +14,12 @@ class TranslationManager:
 	__instance: "TranslationManager | None" = None
 	translations: NullTranslations | None
 
-	def __new__(cls) -> Self:
+	def __new__(cls) -> "TranslationManager":
 		if cls.__instance is None:
 			cls.__instance = super().__new__(cls)
 			cls.__instance.translations = None
 			cls.__instance.setup_translation(lang="en")
-		return cls.__instance  # type: ignore[return-value]
+		return cls.__instance
 
 	def setup_translation(self, lang: str) -> None:
 		"""Set up translations for a given language."""
