@@ -5,7 +5,11 @@ import uuid
 from fastapi import APIRouter, status
 
 from app.api.v1.dependencies.auth import CurrentAdmin, CurrentUser
-from app.domain.schemas.category import CategoryCreateSchema, CategoryResponseSchema
+from app.domain.schemas.category import (
+	CategoryCreateSchema,
+	CategoryResponseSchema,
+	CategoryUpdateSchema,
+)
 from app.domain.usecases.category import CategoryUsecaseDependency
 
 router = APIRouter(prefix="/categories", tags=["categories"])
@@ -20,9 +24,24 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 async def create(
 	usecase: CategoryUsecaseDependency,
 	data: CategoryCreateSchema,
-	_: CurrentAdmin,  # só valida role, não usa o objeto
+	_: CurrentAdmin,
 ) -> CategoryResponseSchema:
 	return await usecase.create(data=data)
+
+
+@router.patch(
+	"/{id}",
+	response_model=CategoryResponseSchema,
+	status_code=status.HTTP_201_CREATED,
+	summary="Creates a new category (admin only)",
+)
+async def partial_update(
+	usecase: CategoryUsecaseDependency,
+	data: CategoryUpdateSchema,
+	category_id: uuid.UUID,
+	_: CurrentAdmin,
+) -> CategoryResponseSchema:
+	return await usecase.partial_update(data=data, category_id=category_id)
 
 
 @router.get(

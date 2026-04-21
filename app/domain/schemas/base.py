@@ -7,7 +7,7 @@ from pydantic import UUID4, BaseModel, ConfigDict
 
 
 class BaseSchema(BaseModel):
-	model_config: ClassVar[ConfigDict] = ConfigDict(from_attributes=True)
+	model_config: ClassVar[ConfigDict] = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class OutSchema(BaseSchema):

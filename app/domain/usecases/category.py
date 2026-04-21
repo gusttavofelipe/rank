@@ -11,10 +11,17 @@ from app.core.exceptions.db import (
 	ObjectAlreadyExistError,
 	ObjectNotFound,
 )
+from app.core.logging import get_logger
 from app.domain.models import CategoryModel
-from app.domain.schemas.category import CategoryCreateSchema, CategoryResponseSchema
+from app.domain.schemas.category import (
+	CategoryCreateSchema,
+	CategoryResponseSchema,
+	CategoryUpdateSchema,
+)
 from app.infra.db.specifications.category import CategoryById, CategoryBySlug
 from app.infra.repositories.category import CategoryRepositoryDependency
+
+logger = get_logger(__name__)
 
 
 class CategoryUsecase:
@@ -41,6 +48,28 @@ class CategoryUsecase:
 			raise DBOperationError(
 				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
 			)
+
+	async def partial_update(
+		self, data: CategoryUpdateSchema, category_id: uuid.UUID
+	) -> CategoryResponseSchema:
+		try:
+			async with self.category_repository.transaction() as transaction:
+				category: (
+					CategoryModel | None
+				) = await self.category_repository.partial_update(
+					spec=CategoryById(id=category_id),
+					data=data,
+					transaction=transaction,
+				)
+				if category is not None:
+					return CategoryResponseSchema.model_validate(category)
+			raise ObjectNotFound
+		except IntegrityError as exc:
+			logger.error(f"Integrity error: {exc}")
+			raise DBOperationError
+		except SQLAlchemyError as exc:
+			logger.error(f"SQLAlchemy error: {exc}")
+			raise DBOperationError
 
 	async def get_by_id(self, id: uuid.UUID) -> CategoryResponseSchema:
 		method_path: str = (
