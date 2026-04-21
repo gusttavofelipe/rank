@@ -10,7 +10,7 @@ from app.infra.db.specifications.base import Specification
 
 class CategoryByName(Specification[CategoryModel]):
 	def __init__(self, name: str) -> None:
-		self.name = name
+		self.name: str = name
 
 	def apply(self, query: Select[tuple[CategoryModel]]) -> Select[tuple[CategoryModel]]:
 		return query.where(CategoryModel.name.ilike(f"%{self.name}%"))
@@ -18,7 +18,7 @@ class CategoryByName(Specification[CategoryModel]):
 
 class CategoryBySlug(Specification[CategoryModel]):
 	def __init__(self, slug: str) -> None:
-		self.slug = slug
+		self.slug: str = slug
 
 	def apply(self, query: Select[tuple[CategoryModel]]) -> Select[tuple[CategoryModel]]:
 		return query.where(CategoryModel.slug == self.slug)
@@ -26,7 +26,7 @@ class CategoryBySlug(Specification[CategoryModel]):
 
 class CategoryById(Specification[CategoryModel]):
 	def __init__(self, id: uuid.UUID) -> None:
-		self.id = id
+		self.id: uuid.UUID = id
 
 	def apply(self, query: Select[tuple[CategoryModel]]) -> Select[tuple[CategoryModel]]:
 		return query.where(CategoryModel.id == self.id)

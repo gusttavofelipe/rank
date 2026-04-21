@@ -7,7 +7,7 @@ from app.domain.models.base import CreateBaseModel
 
 
 class CountryModel(CreateBaseModel):
-	__tablename__ = "countries"
+	__tablename__: str = "countries"
 
 	name: Mapped[str] = mapped_column(String(255))
 	code: Mapped[str] = mapped_column(String(3), unique=True, index=True)

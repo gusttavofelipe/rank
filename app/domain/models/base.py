@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from sqlalchemy import DateTime, Integer, Uuid, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -11,7 +11,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class DeclarativeBaseModel(DeclarativeBase): ...
 
 
-IntPK = Annotated[
+type IntPK = Annotated[
 	int,
 	mapped_column(
 		Integer,
@@ -19,7 +19,7 @@ IntPK = Annotated[
 	),
 ]
 
-UUIDPublic = Annotated[
+type UUIDPublic = Annotated[
 	uuid.UUID,
 	mapped_column(
 		Uuid(as_uuid=True),
@@ -30,14 +30,14 @@ UUIDPublic = Annotated[
 	),
 ]
 
-TZDatetime = Annotated[
+type TZDatetime = Annotated[
 	datetime,
 	mapped_column(DateTime(timezone=True)),
 ]
 
 
 class CreateBaseModel(DeclarativeBaseModel):
-	__abstract__ = True
+	__abstract__: ClassVar[bool] = True
 
 	pk_id: Mapped[IntPK]
 	id: Mapped[UUIDPublic]

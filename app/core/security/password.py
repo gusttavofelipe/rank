@@ -5,7 +5,7 @@ from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatc
 
 from app.core.config import settings
 
-_hasher = PasswordHasher(
+_hasher: PasswordHasher = PasswordHasher(
 	time_cost=3,  # iterações
 	memory_cost=65536,  # 64MB
 	parallelism=4,  # threads
@@ -15,12 +15,12 @@ _hasher = PasswordHasher(
 
 
 def hash_password(password: str) -> str:
-	peppered = password + settings.PASSWORD_PEPPER
+	peppered: str = password + settings.PASSWORD_PEPPER
 	return _hasher.hash(peppered)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-	peppered = plain_password + settings.PASSWORD_PEPPER
+	peppered: str = plain_password + settings.PASSWORD_PEPPER
 	try:
 		return _hasher.verify(hashed_password, peppered)
 	except (VerifyMismatchError, VerificationError, InvalidHashError):

@@ -9,7 +9,7 @@ from app.domain.models.base import CreateBaseModel
 
 
 class RefreshTokenModel(CreateBaseModel):
-	__tablename__ = "refresh_tokens"
+	__tablename__: str = "refresh_tokens"
 
 	user_pk_id: Mapped[int] = mapped_column(ForeignKey("users.pk_id"))
 	token: Mapped[str] = mapped_column(String(512), unique=True, index=True)

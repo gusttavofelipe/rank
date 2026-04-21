@@ -3,8 +3,10 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import update
+from sqlalchemy import ColumnElement, Select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.sql.dml import Update
 
 from app.domain.models.refresh_token import RefreshTokenModel
 from app.infra.db.manager import DatabaseDependency
@@ -33,8 +35,8 @@ class RefreshTokenRepository(PostgresRepository[RefreshTokenModel]):
 		spec: Specification[RefreshTokenModel],
 		transaction: Transaction[RefreshTokenModel] | None = None,
 	) -> RefreshTokenModel | None:
-		session = transaction.session if transaction else self.session
-		query = spec.apply(select(RefreshTokenModel))
+		session: AsyncSession = transaction.session if transaction else self.session
+		query: Select[tuple[RefreshTokenModel]] = spec.apply(select(RefreshTokenModel))
 		return (await session.execute(query)).scalars().first()
 
 	async def revoke(
@@ -50,15 +52,15 @@ class RefreshTokenRepository(PostgresRepository[RefreshTokenModel]):
 		user_pk_id: int,
 		transaction: Transaction[RefreshTokenModel],
 	) -> None:
-		base_query = (
+		base_query: Select[tuple[RefreshTokenModel]] = (
 			RefreshTokenByUserPkId(user_pk_id) & RefreshTokenNotRevoked()
 		).apply(select(RefreshTokenModel))
 
-		clause = base_query.whereclause
+		clause: ColumnElement[bool] | None = base_query.whereclause
 		if clause is None:
 			return
 
-		stmt = update(RefreshTokenModel).where(clause).values(revoked=True)
+		stmt: Update = update(RefreshTokenModel).where(clause).values(revoked=True)
 		await transaction.session.execute(stmt)
 
 	async def delete(

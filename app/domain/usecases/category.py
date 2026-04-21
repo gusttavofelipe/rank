@@ -21,15 +21,15 @@ class CategoryUsecase:
 	"""Handles category business logic."""
 
 	def __init__(self, category_repository: CategoryRepositoryDependency) -> None:
-		self.category_repository = category_repository
+		self.category_repository: CategoryRepositoryDependency = category_repository
 
 	async def create(self, data: CategoryCreateSchema) -> CategoryResponseSchema:
-		method_path = (
+		method_path: str = (
 			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
 		)
 		try:
 			async with self.category_repository.transaction() as transaction:
-				category = CategoryModel(**data.model_dump(mode="json"))
+				category: CategoryModel = CategoryModel(**data.model_dump(mode="json"))
 				await self.category_repository.create(
 					orm_model=category, transaction=transaction
 				)
@@ -43,11 +43,13 @@ class CategoryUsecase:
 			)
 
 	async def get_by_id(self, id: uuid.UUID) -> CategoryResponseSchema:
-		method_path = (
+		method_path: str = (
 			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
 		)
 		try:
-			category = await self.category_repository.get(CategoryById(id))
+			category: CategoryModel | None = await self.category_repository.get(
+				CategoryById(id)
+			)
 			if not category:
 				raise ObjectNotFound
 			return CategoryResponseSchema.model_validate(category)
@@ -59,11 +61,13 @@ class CategoryUsecase:
 			)
 
 	async def get_by_slug(self, slug: str) -> CategoryResponseSchema:
-		method_path = (
+		method_path: str = (
 			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
 		)
 		try:
-			category = await self.category_repository.get(CategoryBySlug(slug))
+			category: CategoryModel | None = await self.category_repository.get(
+				CategoryBySlug(slug)
+			)
 			if not category:
 				raise ObjectNotFound
 			return CategoryResponseSchema.model_validate(category)
@@ -75,7 +79,7 @@ class CategoryUsecase:
 			)
 
 	async def list(self, name: str | None = None) -> list[CategoryResponseSchema]:
-		method_path = (
+		method_path: str = (
 			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
 		)
 		try:
@@ -85,7 +89,7 @@ class CategoryUsecase:
 			spec: Specification[CategoryModel] = (
 				CategoryByName(name) if name else CategoryByName("")
 			)
-			categories = await self.category_repository.list_(spec)
+			categories: list[CategoryModel] = await self.category_repository.list_(spec)
 			return [CategoryResponseSchema.model_validate(c) for c in categories]
 		except SQLAlchemyError as exc:
 			raise DBOperationError(

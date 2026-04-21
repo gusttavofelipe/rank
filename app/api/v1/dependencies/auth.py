@@ -1,7 +1,7 @@
 """app/api/v1/dependencies/auth.py"""
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -14,16 +14,16 @@ from app.infra.db.manager import DatabaseManager
 from app.infra.db.specifications.user import UserById
 from app.infra.repositories.user import UserRepository
 
-bearer_scheme = HTTPBearer()
+bearer_scheme: HTTPBearer = HTTPBearer()
 
 
 async def get_current_user(
 	credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 	session: AsyncSession = Depends(DatabaseManager.get_session),
 ) -> UserModel:
-	payload = decode_access_token(credentials.credentials)
-	repo = UserRepository(session=session)
-	user = await repo.get(UserById(uuid.UUID(payload["sub"])))
+	payload: dict[str, Any] = decode_access_token(credentials.credentials)
+	repo: UserRepository = UserRepository(session=session)
+	user: UserModel | None = await repo.get(UserById(uuid.UUID(payload["sub"])))
 	if not user:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 	return user

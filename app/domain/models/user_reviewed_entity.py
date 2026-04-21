@@ -7,7 +7,7 @@ from app.domain.models.base import CreateBaseModel
 
 
 class UserReviewedEntityModel(CreateBaseModel):
-	__tablename__ = "user_reviewed_entities"
+	__tablename__: str = "user_reviewed_entities"
 
 	user_pk_id: Mapped[int] = mapped_column(ForeignKey("users.pk_id"))
 	reviewed_entity_pk_id: Mapped[int] = mapped_column(

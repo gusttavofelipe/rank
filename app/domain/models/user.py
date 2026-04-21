@@ -8,7 +8,7 @@ from app.domain.models.enums.user import UserRoleEnum
 
 
 class UserModel(CreateBaseModel):
-	__tablename__ = "users"
+	__tablename__: str = "users"
 
 	name: Mapped[str] = mapped_column(String(255))
 	email: Mapped[str] = mapped_column(String(255), unique=True, index=True)

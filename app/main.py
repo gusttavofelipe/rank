@@ -40,7 +40,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
 class App(FastAPI):
 	"""Custom FastAPI application class."""
 
-	def __init__(self, *args: tuple[Any, ...], **kwargs: Any) -> None:
+	def __init__(self, *args: Any, **kwargs: Any) -> None:
 		"""Initializes the FastAPI application with default settings and lifespan."""
 		super().__init__(
 			*args,

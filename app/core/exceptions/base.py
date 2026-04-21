@@ -6,4 +6,4 @@ class CustomBaseException(Exception):
 		super().__init__(*args)
 
 		if message:
-			self.message = message
+			self.message: str = message

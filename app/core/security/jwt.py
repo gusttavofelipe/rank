@@ -29,7 +29,7 @@ def generate_refresh_token() -> tuple[str, datetime]:
 	return token, expire
 
 
-def decode_access_token(token: str) -> dict:
+def decode_access_token(token: str) -> dict[str, Any]:
 	try:
 		payload: dict[str, Any] = jwt.decode(
 			token, settings.SECRET_KEY, algorithms=[ALGORITHM]

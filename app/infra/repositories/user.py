@@ -1,10 +1,13 @@
 """app/infra/repositories/user.py"""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
-from sqlalchemy import update
+from sqlalchemy import ColumnElement, Select, update
+from sqlalchemy.engine import Result
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.sql.dml import Update
 
 from app.domain.models import UserModel
 from app.domain.schemas.user import UserUpdateSchema
@@ -28,8 +31,8 @@ class UserRepository(PostgresRepository[UserModel]):
 		spec: Specification[UserModel],
 		transaction: Transaction[UserModel] | None = None,
 	) -> UserModel | None:
-		session = transaction.session if transaction else self.session
-		query = spec.apply(select(UserModel))
+		session: AsyncSession = transaction.session if transaction else self.session
+		query: Select[tuple[UserModel]] = spec.apply(select(UserModel))
 		return (await session.execute(query)).scalars().first()
 
 	async def list(
@@ -38,7 +41,9 @@ class UserRepository(PostgresRepository[UserModel]):
 		limit: int = 20,
 		offset: int = 0,
 	) -> list[UserModel]:
-		query = spec.apply(select(UserModel)).limit(limit).offset(offset)
+		query: Select[tuple[UserModel]] = (
+			spec.apply(select(UserModel)).limit(limit).offset(offset)
+		)
 		return list((await self.session.execute(query)).scalars().all())
 
 	async def partial_update(
@@ -47,24 +52,24 @@ class UserRepository(PostgresRepository[UserModel]):
 		data: UserUpdateSchema,
 		transaction: Transaction[UserModel],
 	) -> UserModel | None:
-		base_query = spec.apply(select(UserModel))
-		update_data = data.model_dump(mode="json", exclude_unset=True)
+		base_query: Select[tuple[UserModel]] = spec.apply(select(UserModel))
+		update_data: dict[str, Any] = data.model_dump(mode="json", exclude_unset=True)
 
 		if not update_data:
 			return None
 
-		clause = base_query.whereclause
+		clause: ColumnElement[bool] | None = base_query.whereclause
 		if clause is None:
-			return
+			return None
 
-		stmt = (
+		stmt: Any = (
 			update(UserModel)
 			.where(clause)
 			.values(**update_data)
 			.execution_options(synchronize_session=False)
 			.returning(UserModel)
 		)
-		result = await transaction.session.execute(stmt)
+		result: Result[Any] = await transaction.session.execute(stmt)
 		return result.scalars().first()
 
 	async def update_password(
@@ -73,12 +78,12 @@ class UserRepository(PostgresRepository[UserModel]):
 		password_hash: str,
 		transaction: Transaction[UserModel],
 	) -> None:
-		base_query = spec.apply(select(UserModel))
-		clause = base_query.whereclause
+		base_query: Select[tuple[UserModel]] = spec.apply(select(UserModel))
+		clause: ColumnElement[bool] | None = base_query.whereclause
 		if clause is None:
 			return
 
-		stmt = (
+		stmt: Update = (
 			update(UserModel)
 			.where(clause)
 			.values(password_hash=password_hash)

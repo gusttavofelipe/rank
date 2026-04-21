@@ -8,7 +8,7 @@ from app.infra.db.specifications.base import Specification
 
 class RefreshTokenByToken(Specification[RefreshTokenModel]):
 	def __init__(self, token: str) -> None:
-		self.token = token
+		self.token: str = token
 
 	def apply(
 		self, query: Select[tuple[RefreshTokenModel]]
@@ -18,7 +18,7 @@ class RefreshTokenByToken(Specification[RefreshTokenModel]):
 
 class RefreshTokenByUserPkId(Specification[RefreshTokenModel]):
 	def __init__(self, user_pk_id: int) -> None:
-		self.user_pk_id = user_pk_id
+		self.user_pk_id: int = user_pk_id
 
 	def apply(
 		self, query: Select[tuple[RefreshTokenModel]]

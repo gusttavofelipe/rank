@@ -48,7 +48,7 @@ class AuthUsecase:
 	async def register(self, data: UserRegisterSchema) -> UserOutSchema:
 		try:
 			async with self.user_repository.transaction() as transaction:
-				user = UserModel(
+				user: UserModel = UserModel(
 					**data.model_dump(mode="json", exclude={"password"}),
 					password_hash=hash_password(password=data.password),
 					role=UserRoleEnum.REVIEWER,
@@ -65,7 +65,9 @@ class AuthUsecase:
 
 	async def login(self, data: UserLoginSchema) -> tuple[LoginOutSchema, str]:
 		try:
-			user = await self.user_repository.get(UserByEmail(data.email))
+			user: UserModel | None = await self.user_repository.get(
+				UserByEmail(data.email)
+			)
 			if not user or not verify_password(data.password, user.password_hash):
 				raise InvalidCredentialsError
 
@@ -80,6 +82,8 @@ class AuthUsecase:
 			access_token: str = generate_access_token(
 				user_id=str(user.id), role=user.role.value
 			)
+			refresh_token_str: str
+			expires_at: datetime
 			refresh_token_str, expires_at = generate_refresh_token()
 
 			async with self.refresh_token_repository.transaction() as transaction:
@@ -104,7 +108,9 @@ class AuthUsecase:
 
 	async def refresh(self, refresh_token_str: str) -> tuple[TokenOutSchema, str]:
 		try:
-			refresh_token = await self.refresh_token_repository.get(
+			refresh_token: (
+				RefreshTokenModel | None
+			) = await self.refresh_token_repository.get(
 				RefreshTokenByToken(refresh_token_str) & RefreshTokenNotRevoked()
 			)
 			if not refresh_token or refresh_token.expires_at.replace(
@@ -112,13 +118,17 @@ class AuthUsecase:
 			) < datetime.now(UTC):
 				raise TokenRevokedError
 
-			user = await self.user_repository.get(UserByPkId(refresh_token.user_pk_id))
+			user: UserModel | None = await self.user_repository.get(
+				UserByPkId(refresh_token.user_pk_id)
+			)
 			if not user:
 				raise InvalidCredentialsError
 
 			new_access_token: str = generate_access_token(
 				user_id=str(user.id), role=user.role.value
 			)
+			new_refresh_token_str: str
+			expires_at: datetime
 			new_refresh_token_str, expires_at = generate_refresh_token()
 
 			async with self.refresh_token_repository.transaction() as transaction:
@@ -145,7 +155,9 @@ class AuthUsecase:
 
 	async def logout(self, refresh_token_str: str) -> None:
 		try:
-			refresh_token = await self.refresh_token_repository.get(
+			refresh_token: (
+				RefreshTokenModel | None
+			) = await self.refresh_token_repository.get(
 				RefreshTokenByToken(refresh_token_str)
 			)
 			if not refresh_token:

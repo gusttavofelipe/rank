@@ -7,7 +7,7 @@ from app.domain.models.base import CreateBaseModel
 
 
 class CityModel(CreateBaseModel):
-	__tablename__ = "cities"
+	__tablename__: str = "cities"
 
 	state_pk_id: Mapped[int] = mapped_column(ForeignKey("states.pk_id"))
 	name: Mapped[str] = mapped_column(String(255))

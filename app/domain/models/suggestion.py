@@ -10,7 +10,7 @@ from app.domain.models.enums.status import StatusEnum
 
 
 class SuggestionModel(CreateBaseModel):
-	__tablename__ = "suggestions"
+	__tablename__: str = "suggestions"
 
 	user_pk_id: Mapped[int] = mapped_column(ForeignKey("users.pk_id"))
 	city_pk_id: Mapped[int] = mapped_column(ForeignKey("cities.pk_id"))

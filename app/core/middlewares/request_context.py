@@ -18,6 +18,7 @@ API gateway or load balancer), that value is reused instead of generating a
 new one, preserving distributed trace chains.
 """
 
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -31,7 +32,7 @@ __all__ = ["RequestContextMiddleware"]
 
 _REQUEST_ID_HEADER: str = "X-Request-ID"
 
-logger = get_logger(__name__)
+logger: logging.Logger = get_logger(__name__)
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):

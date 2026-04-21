@@ -16,12 +16,14 @@ def apply_operator[OrmModelT: DeclarativeBaseModel](
 	and value with operator support.
 	"""
 
+	col_name: str
+	op: str
 	if "__" in field:
 		col_name, op = field.split("__", 1)
 	else:
 		col_name, op = field, "eq"
 
-	column = getattr(orm_model, col_name)
+	column: Any = getattr(orm_model, col_name)
 
 	if op == "eq":
 		return column == value
@@ -48,7 +50,7 @@ def build_query[OrmModelT: DeclarativeBaseModel](
 ) -> Select[tuple[OrmModelT]] | list[BinaryExpression[Any]]:
 	"""Build a SQLAlchemy SELECT query for a given model with optional filters."""
 
-	filters = filter or {}
+	filters: dict[str, Any] = filter or {}
 	conditions: list[BinaryExpression[Any]] = [
 		apply_operator(orm_model, key, value) for key, value in filters.items()
 	]

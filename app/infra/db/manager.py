@@ -1,7 +1,7 @@
 """app/infra/db/manager.py"""
 
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from asyncpg import Pool, create_pool
 from fastapi import Depends
@@ -17,9 +17,9 @@ from app.core.config import settings
 
 
 class DatabaseManager:
-	_engine: AsyncEngine | None = None
-	_sessionmaker: async_sessionmaker[AsyncSession] | None = None
-	_pool: Pool | None = None
+	_engine: ClassVar[AsyncEngine | None] = None
+	_sessionmaker: ClassVar[async_sessionmaker[AsyncSession] | None] = None
+	_pool: ClassVar[Pool | None] = None
 
 	@classmethod
 	def get_engine(cls) -> AsyncEngine:

@@ -7,7 +7,7 @@ from app.domain.models.base import CreateBaseModel
 
 
 class CategoryModel(CreateBaseModel):
-	__tablename__ = "categories"
+	__tablename__: str = "categories"
 
 	name: Mapped[str] = mapped_column(String(255))
 	slug: Mapped[str] = mapped_column(String(255), unique=True, index=True)

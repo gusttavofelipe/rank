@@ -13,7 +13,7 @@ from app.domain.schemas.auth import (
 from app.domain.schemas.user import UserOutSchema
 from app.domain.usecases.auth import AuthUsecaseDependency
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router: APIRouter = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post(
@@ -40,6 +40,8 @@ async def login(
 	usecase: AuthUsecaseDependency,
 	data: UserLoginSchema,
 ) -> LoginOutSchema:
+	result: LoginOutSchema
+	refresh_token: str
 	result, refresh_token = await usecase.login(data=data)
 	response.set_cookie(
 		key=settings.REFRESH_TOKEN_COOKIE,
@@ -63,6 +65,8 @@ async def refresh(
 	usecase: AuthUsecaseDependency,
 	refresh_token: str = Cookie(alias=settings.REFRESH_TOKEN_COOKIE),
 ) -> TokenOutSchema:
+	tokens: TokenOutSchema
+	new_refresh_token: str
 	tokens, new_refresh_token = await usecase.refresh(refresh_token_str=refresh_token)
 	response.set_cookie(
 		key=settings.REFRESH_TOKEN_COOKIE,

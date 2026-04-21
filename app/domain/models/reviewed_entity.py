@@ -10,7 +10,7 @@ from app.domain.models.enums.status import StatusEnum
 
 
 class ReviewedEntityModel(CreateBaseModel):
-	__tablename__ = "reviewed_entities"
+	__tablename__: str = "reviewed_entities"
 
 	city_pk_id: Mapped[int] = mapped_column(ForeignKey("cities.pk_id"))
 	category_pk_id: Mapped[int] = mapped_column(ForeignKey("categories.pk_id"))

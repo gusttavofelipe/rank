@@ -7,7 +7,7 @@ from app.domain.models.base import CreateBaseModel
 
 
 class ReviewModel(CreateBaseModel):
-	__tablename__ = "reviews"
+	__tablename__: str = "reviews"
 
 	reviewed_entity_pk_id: Mapped[int] = mapped_column(
 		ForeignKey("reviewed_entities.pk_id")
