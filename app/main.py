@@ -8,12 +8,20 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.api.v1.routers.auth import router as auth_router
+from app.api.v1.routers.category import router as category_router
 from app.core.config import settings
 from app.core.exceptions.db import DatabaseConnectionError
 from app.core.exceptions.handler import register_exception_handlers
-from app.core.logging import LOGGING_CONFIG, logger
+from app.core.logging import build_uvicorn_log_config, configure, get_logger
 from app.core.middlewares.language import LanguageMiddleware
+from app.core.middlewares.request_context import RequestContextMiddleware
 from app.infra.db.manager import DatabaseManager
+
+# Configure the root logger before anything else runs.
+# Reads LOG_LEVEL and LOG_FORMAT from environment automatically.
+configure()
+
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -27,14 +35,14 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
 
 	yield
 
+	logger.info("Application shutting down")
+
 
 class App(FastAPI):
-	"""Custom FastAPI application class"""
+	"""Custom FastAPI application class."""
 
 	def __init__(self, *args: tuple[Any, ...], **kwargs: Any) -> None:
-		"""Initializes the FastAPI application
-		with default settings and lifespan.
-		"""
+		"""Initializes the FastAPI application with default settings and lifespan."""
 		super().__init__(
 			*args,
 			**kwargs,
@@ -48,16 +56,23 @@ class App(FastAPI):
 		self.__add_middlewares()
 
 	def __register_exception_handlers(self) -> None:
-		"""Registers all mapped exception handlers for the application"""
+		"""Registers all mapped exception handlers for the application."""
 		register_exception_handlers(self)
 
 	def __add_middlewares(self) -> None:
-		"""Includes all predefined API middlewares into the application"""
+		"""Includes all predefined API middlewares into the application.
+
+		Order matters — middlewares wrap the request in LIFO order, so the last
+		one added is the outermost wrapper.  RequestContextMiddleware should be
+		outermost so request_id is available to every subsequent layer.
+		"""
 		self.add_middleware(LanguageMiddleware)
+		self.add_middleware(RequestContextMiddleware)
 
 	def __include_routers(self) -> None:
-		"""Includes all predefined API routers into the application"""
+		"""Includes all predefined API routers into the application."""
 		self.include_router(router=auth_router)
+		self.include_router(router=category_router)
 
 
 app: FastAPI = App()
@@ -68,7 +83,7 @@ if __name__ == "__main__":
 		"app.main:app",
 		host="0.0.0.0",
 		port=8001,
-		log_config=LOGGING_CONFIG,
+		log_config=build_uvicorn_log_config(level=settings.APP_VERSION and "INFO"),
 		reload=True,
 		env_file=".env",
 	)

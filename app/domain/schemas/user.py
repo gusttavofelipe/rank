@@ -1,9 +1,9 @@
 """app/domain/schemas/user.py"""
 
-from pydantic import EmailStr
+from pydantic import EmailStr, Field
 
 from app.domain.models.enums.user import UserRoleEnum
-from app.domain.schemas.base import OutSchema
+from app.domain.schemas.base import BaseSchema, OutSchema
 
 
 class UserOutSchema(OutSchema):
@@ -12,3 +12,11 @@ class UserOutSchema(OutSchema):
 	profile_image_url: str | None
 	role: UserRoleEnum
 	is_verified: bool
+
+
+class UserUpdateSchema(BaseSchema):
+	name: str | None = Field(default=None, min_length=2, max_length=255)
+	email: EmailStr | None = None
+	profile_image_url: str | None = Field(default=None, max_length=500)
+	is_verified: bool | None = None
+	role: UserRoleEnum | None = None

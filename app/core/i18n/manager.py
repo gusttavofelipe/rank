@@ -1,6 +1,6 @@
 """app/core/i18n/manager.py"""
 
-from gettext import translation
+from gettext import NullTranslations, translation
 from pathlib import Path
 from typing import Self
 
@@ -12,14 +12,15 @@ class TranslationManager:
 	Singleton that manages translations at runtime.
 	"""
 
-	__instance = None
+	__instance: "TranslationManager | None" = None
+	translations: NullTranslations | None
 
 	def __new__(cls) -> Self:
 		if cls.__instance is None:
 			cls.__instance = super().__new__(cls)
 			cls.__instance.translations = None
 			cls.__instance.setup_translation(lang="en")
-		return cls.__instance
+		return cls.__instance  # type: ignore[return-value]
 
 	def setup_translation(self, lang: str) -> None:
 		"""Set up translations for a given language."""
@@ -32,7 +33,7 @@ class TranslationManager:
 		"""Return the translated string."""
 		if not self.translations:
 			self.setup_translation("en")
-		return self.translations.gettext(text)
+		return self.translations.gettext(text)  # type: ignore[union-attr]
 
 
 async def set_language(request: Request) -> None:

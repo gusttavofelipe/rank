@@ -1,8 +1,5 @@
 """app/infra/repositories/postgres.py"""
 
-from collections.abc import Mapping
-from typing import Any
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models.base import DeclarativeBaseModel
@@ -10,9 +7,7 @@ from app.infra.db.transaction import Transaction
 from app.infra.repositories.interfaces.postgres import Repository
 
 
-class PostgresRepository[OrmModelT: DeclarativeBaseModel, FiltersT: Mapping[str, Any]](
-	Repository[OrmModelT, FiltersT]
-):
+class PostgresRepository[OrmModelT: DeclarativeBaseModel](Repository[OrmModelT]):
 	"""Generic repository for PostgreSQL database operations using SQLAlchemy."""
 
 	orm_model: type[OrmModelT]

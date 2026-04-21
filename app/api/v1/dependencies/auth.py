@@ -1,5 +1,5 @@
-"""app/api/v1/dependencies/auth.py"""
-
+# app/api/v1/dependencies/auth.py
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -10,6 +10,7 @@ from app.core.security.jwt import decode_access_token
 from app.domain.models.enums.user import UserRoleEnum
 from app.domain.models.user import UserModel
 from app.infra.db.manager import DatabaseManager
+from app.infra.db.specifications.user import UserById
 from app.infra.repositories.user import UserRepository
 
 bearer_scheme = HTTPBearer()
@@ -19,15 +20,11 @@ async def get_current_user(
 	credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 	session: AsyncSession = Depends(DatabaseManager.get_session),
 ) -> UserModel:
-	token = credentials.credentials
-	payload = decode_access_token(token)  # lança exceção se inválido/expirado
-
+	payload = decode_access_token(credentials.credentials)
 	repo = UserRepository(session=session)
-	user = await repo.get(filters={"id": payload["sub"]})
-
+	user = await repo.get(UserById(uuid.UUID(payload["sub"])))
 	if not user:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
 	return user
 
 
@@ -41,9 +38,7 @@ async def require_verified(
 	return current_user
 
 
-async def require_admin(
-	current_user: UserModel = Depends(get_current_user),
-) -> UserModel:
+async def require_admin(current_user: UserModel = Depends(get_current_user)) -> UserModel:
 	if current_user.role != UserRoleEnum.ADMIN:
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 	return current_user
@@ -57,7 +52,6 @@ async def require_reviewed(
 	return current_user
 
 
-# Annotated aliases para usar nos endpoints
 CurrentUser = Annotated[UserModel, Depends(get_current_user)]
 CurrentAdmin = Annotated[UserModel, Depends(require_admin)]
 CurrentReviewed = Annotated[UserModel, Depends(require_reviewed)]

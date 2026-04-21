@@ -67,6 +67,8 @@ setup:
 
 # App
 run:
+	uv run python -m app.main
+runt:
 	uv run opentelemetry-instrument python -m app.main
 
 
@@ -120,4 +122,3 @@ i18n-compile:
 otel-instrument: # dev env
 	uv run --group otel python -m ensurepip --upgrade
 	uv run --group otel opentelemetry-bootstrap -a install
-	# uv run --group otel opentelemetry-instrument uvicorn app.main:app

@@ -12,6 +12,9 @@ class Settings(BaseSettings):
 	APP_VERSION: str = "0.0.1"
 	APP_DESCRIPTION: str = "DESCRIPTION"
 
+	LOG_LEVEL: str = ""
+	LOG_FORMAT: str = ""
+
 	DATABASE_URL: str = ""
 	POSTGRES_DB: str = ""
 	POSTGRES_USER: str = ""

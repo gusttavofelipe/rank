@@ -23,6 +23,7 @@ repos:
     rev: v3.19.0
     hooks:
       - id: pyupgrade
+        language_version: python3.13 # v3.19.0 crashes on py3.14 (tokenize.cookie_re bug)
         args:
           - --py312-plus
           - --keep-runtime-typing

@@ -21,6 +21,11 @@ from app.domain.schemas.auth import (
 	UserRegisterSchema,
 )
 from app.domain.schemas.user import UserOutSchema
+from app.infra.db.specifications.refresh_token import (
+	RefreshTokenByToken,
+	RefreshTokenNotRevoked,
+)
+from app.infra.db.specifications.user import UserByEmail, UserByPkId
 from app.infra.repositories.refresh_token import RefreshTokenRepositoryDependency
 from app.infra.repositories.user import UserRepositoryDependency
 
@@ -36,10 +41,17 @@ class AuthUsecase:
 		self.user_repository = user_repository
 		self.refresh_token_repository = refresh_token_repository
 
+	def _method_path(self) -> str:
+		frame = inspect.currentframe()
+		if frame and frame.f_back:
+			return (
+				f"{self.__class__.__module__}."
+				f"{self.__class__.__qualname__}."
+				f"{frame.f_back.f_code.co_name}"
+			)
+		return f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+
 	async def register(self, data: UserRegisterSchema) -> UserOutSchema:
-		method_path = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			async with self.user_repository.transaction() as transaction:
 				user = UserModel(
@@ -54,75 +66,65 @@ class AuthUsecase:
 			raise ObjectAlreadyExistError
 		except SQLAlchemyError as exc:
 			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
+				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
 			)
 
 	async def login(self, data: UserLoginSchema) -> tuple[LoginOutSchema, str]:
-		method_path = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
-			user = await self.user_repository.get(filters={"email": data.email})
+			user = await self.user_repository.get(UserByEmail(data.email))
 			if not user or not verify_password(data.password, user.password_hash):
 				raise InvalidCredentialsError
 
 			if needs_rehash(user.password_hash):
 				async with self.user_repository.transaction() as transaction:
-					await self.user_repository.partial_update(
-						filters={"pk_id": user.pk_id},
-						data={"password_hash": hash_password(data.password)},
+					await self.user_repository.update_password(
+						spec=UserByPkId(user.pk_id),
+						password_hash=hash_password(data.password),
 						transaction=transaction,
 					)
 
 			access_token = generate_access_token(
-				user_id=str(user.id),
-				role=user.role.value,
+				user_id=str(user.id), role=user.role.value
 			)
 			refresh_token_str, expires_at = generate_refresh_token()
 
 			async with self.refresh_token_repository.transaction() as transaction:
-				refresh_token = RefreshTokenModel(
-					user_pk_id=user.pk_id,
-					token=refresh_token_str,
-					expires_at=expires_at,
-				)
 				await self.refresh_token_repository.create(
-					orm_model=refresh_token,
+					orm_model=RefreshTokenModel(
+						user_pk_id=user.pk_id,
+						token=refresh_token_str,
+						expires_at=expires_at,
+					),
 					transaction=transaction,
 				)
 
-			result = LoginOutSchema(tokens=TokenOutSchema(access_token=access_token))
-			return result, refresh_token_str  # refresh_token separado → vai pro cookie
+			return LoginOutSchema(
+				tokens=TokenOutSchema(access_token=access_token)
+			), refresh_token_str
 
 		except (InvalidCredentialsError, DBOperationError):
 			raise
 		except SQLAlchemyError as exc:
 			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
+				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
 			)
 
 	async def refresh(self, refresh_token_str: str) -> tuple[TokenOutSchema, str]:
-		method_path = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			refresh_token = await self.refresh_token_repository.get(
-				filters={"token": refresh_token_str, "revoked": False}
+				RefreshTokenByToken(refresh_token_str) & RefreshTokenNotRevoked()
 			)
 			if not refresh_token or refresh_token.expires_at.replace(
 				tzinfo=UTC
 			) < datetime.now(UTC):
 				raise TokenRevokedError
 
-			user = await self.user_repository.get(
-				filters={"pk_id": refresh_token.user_pk_id}
-			)
+			user = await self.user_repository.get(UserByPkId(refresh_token.user_pk_id))
 			if not user:
 				raise InvalidCredentialsError
 
 			new_access_token = generate_access_token(
-				user_id=str(user.id),
-				role=user.role.value,
+				user_id=str(user.id), role=user.role.value
 			)
 			new_refresh_token_str, expires_at = generate_refresh_token()
 
@@ -131,13 +133,12 @@ class AuthUsecase:
 					refresh_token=refresh_token,
 					transaction=transaction,
 				)
-				new_refresh_token = RefreshTokenModel(
-					user_pk_id=user.pk_id,
-					token=new_refresh_token_str,
-					expires_at=expires_at,
-				)
 				await self.refresh_token_repository.create(
-					orm_model=new_refresh_token,
+					orm_model=RefreshTokenModel(
+						user_pk_id=user.pk_id,
+						token=new_refresh_token_str,
+						expires_at=expires_at,
+					),
 					transaction=transaction,
 				)
 
@@ -147,16 +148,13 @@ class AuthUsecase:
 			raise
 		except SQLAlchemyError as exc:
 			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
+				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
 			)
 
 	async def logout(self, refresh_token_str: str) -> None:
-		method_path = (
-			f"{self.__class__.__module__}.{inspect.currentframe().f_code.co_qualname}"  # pyright: ignore
-		)
 		try:
 			refresh_token = await self.refresh_token_repository.get(
-				filters={"token": refresh_token_str}
+				RefreshTokenByToken(refresh_token_str)
 			)
 			if not refresh_token:
 				return
@@ -167,8 +165,11 @@ class AuthUsecase:
 				)
 		except SQLAlchemyError as exc:
 			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {method_path}: {exc}"
+				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
 			)
+
+	async def me(self, user: UserModel) -> UserOutSchema:
+		return UserOutSchema.model_validate(user)
 
 
 AuthUsecaseDependency = Annotated[AuthUsecase, Depends()]

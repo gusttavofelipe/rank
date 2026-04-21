@@ -1,6 +1,6 @@
 """app/infra/repositories/refresh_token.py"""
 
-from typing import Annotated, TypedDict
+from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import update
@@ -8,17 +8,16 @@ from sqlalchemy.future import select
 
 from app.domain.models.refresh_token import RefreshTokenModel
 from app.infra.db.manager import DatabaseDependency
+from app.infra.db.specifications.base import Specification
+from app.infra.db.specifications.refresh_token import (
+	RefreshTokenByUserPkId,
+	RefreshTokenNotRevoked,
+)
 from app.infra.db.transaction import Transaction
 from app.infra.repositories.postgres import PostgresRepository
 
 
-class RefreshTokenFilters(TypedDict, total=False):
-	token: str
-	user_pk_id: int
-	revoked: bool
-
-
-class RefreshTokenRepository(PostgresRepository[RefreshTokenModel, RefreshTokenFilters]):
+class RefreshTokenRepository(PostgresRepository[RefreshTokenModel]):
 	def __init__(self, session: DatabaseDependency) -> None:
 		super().__init__(session=session)
 
@@ -31,17 +30,11 @@ class RefreshTokenRepository(PostgresRepository[RefreshTokenModel, RefreshTokenF
 
 	async def get(
 		self,
-		filters: RefreshTokenFilters,
+		spec: Specification[RefreshTokenModel],
 		transaction: Transaction[RefreshTokenModel] | None = None,
 	) -> RefreshTokenModel | None:
 		session = transaction.session if transaction else self.session
-		query = select(RefreshTokenModel)
-		if token := filters.get("token"):
-			query = query.where(RefreshTokenModel.token == token)
-		if user_pk_id := filters.get("user_pk_id"):
-			query = query.where(RefreshTokenModel.user_pk_id == user_pk_id)
-		if (revoked := filters.get("revoked")) is not None:
-			query = query.where(RefreshTokenModel.revoked == revoked)
+		query = spec.apply(select(RefreshTokenModel))
 		return (await session.execute(query)).scalars().first()
 
 	async def revoke(
@@ -57,12 +50,15 @@ class RefreshTokenRepository(PostgresRepository[RefreshTokenModel, RefreshTokenF
 		user_pk_id: int,
 		transaction: Transaction[RefreshTokenModel],
 	) -> None:
-		stmt = (
-			update(RefreshTokenModel)
-			.where(RefreshTokenModel.user_pk_id == user_pk_id)
-			.where(RefreshTokenModel.revoked == False)  # noqa: E712
-			.values(revoked=True)
-		)
+		base_query = (
+			RefreshTokenByUserPkId(user_pk_id) & RefreshTokenNotRevoked()
+		).apply(select(RefreshTokenModel))
+
+		clause = base_query.whereclause
+		if clause is None:
+			return
+
+		stmt = update(RefreshTokenModel).where(clause).values(revoked=True)
 		await transaction.session.execute(stmt)
 
 	async def delete(

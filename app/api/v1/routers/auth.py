@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Cookie, Response, status
 
+from app.api.v1.dependencies.auth import CurrentUser
 from app.core.config import settings
 from app.domain.schemas.auth import (
 	LoginOutSchema,
@@ -86,3 +87,16 @@ async def logout(
 ) -> None:
 	await usecase.logout(refresh_token_str=refresh_token)
 	response.delete_cookie(settings.REFRESH_TOKEN_COOKIE)
+
+
+@router.get(
+	"/me",
+	response_model=UserOutSchema,
+	status_code=status.HTTP_200_OK,
+	summary="Get current authenticated user",
+)
+async def me(
+	usecase: AuthUsecaseDependency,
+	current_user: CurrentUser,
+) -> UserOutSchema:
+	return await usecase.me(user=current_user)

@@ -23,3 +23,6 @@ htmlcov
 
 # binaries
 *.mo
+
+# others
+steps.md
