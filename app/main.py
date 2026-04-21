@@ -17,8 +17,6 @@ from app.core.middlewares.language import LanguageMiddleware
 from app.core.middlewares.request_context import RequestContextMiddleware
 from app.infra.db.manager import DatabaseManager
 
-# Configure the root logger before anything else runs.
-# Reads LOG_LEVEL and LOG_FORMAT from environment automatically.
 configure()
 
 logger = get_logger(__name__)

@@ -1,6 +1,5 @@
 """app/domain/usecases/auth.py"""
 
-import inspect
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -9,6 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.exceptions.auth import InvalidCredentialsError, TokenRevokedError
 from app.core.exceptions.db import DBOperationError, ObjectAlreadyExistError
+from app.core.logging import get_logger
 from app.core.security.jwt import generate_access_token, generate_refresh_token
 from app.core.security.password import hash_password, needs_rehash, verify_password
 from app.domain.models.enums.user import UserRoleEnum
@@ -29,6 +29,8 @@ from app.infra.db.specifications.user import UserByEmail, UserByPkId
 from app.infra.repositories.refresh_token import RefreshTokenRepositoryDependency
 from app.infra.repositories.user import UserRepositoryDependency
 
+logger = get_logger(__name__)
+
 
 class AuthUsecase:
 	"""Handles authentication business logic."""
@@ -38,18 +40,10 @@ class AuthUsecase:
 		user_repository: UserRepositoryDependency,
 		refresh_token_repository: RefreshTokenRepositoryDependency,
 	) -> None:
-		self.user_repository = user_repository
-		self.refresh_token_repository = refresh_token_repository
-
-	def _method_path(self) -> str:
-		frame = inspect.currentframe()
-		if frame and frame.f_back:
-			return (
-				f"{self.__class__.__module__}."
-				f"{self.__class__.__qualname__}."
-				f"{frame.f_back.f_code.co_name}"
-			)
-		return f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+		self.user_repository: UserRepositoryDependency = user_repository
+		self.refresh_token_repository: RefreshTokenRepositoryDependency = (
+			refresh_token_repository
+		)
 
 	async def register(self, data: UserRegisterSchema) -> UserOutSchema:
 		try:
@@ -62,12 +56,12 @@ class AuthUsecase:
 				await self.user_repository.create(orm_model=user, transaction=transaction)
 				await transaction.flush()
 				return UserOutSchema.model_validate(user)
-		except IntegrityError:
+		except IntegrityError as exc:
+			logger.error(f"IntegrityError in register: {exc}")
 			raise ObjectAlreadyExistError
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
-			)
+			logger.error(f"SQLAlchemy error in register: {exc}")
+			raise DBOperationError
 
 	async def login(self, data: UserLoginSchema) -> tuple[LoginOutSchema, str]:
 		try:
@@ -83,7 +77,7 @@ class AuthUsecase:
 						transaction=transaction,
 					)
 
-			access_token = generate_access_token(
+			access_token: str = generate_access_token(
 				user_id=str(user.id), role=user.role.value
 			)
 			refresh_token_str, expires_at = generate_refresh_token()
@@ -105,9 +99,8 @@ class AuthUsecase:
 		except (InvalidCredentialsError, DBOperationError):
 			raise
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
-			)
+			logger.error(f"SQLAlchemy error in login: {exc}")
+			raise DBOperationError
 
 	async def refresh(self, refresh_token_str: str) -> tuple[TokenOutSchema, str]:
 		try:
@@ -123,7 +116,7 @@ class AuthUsecase:
 			if not user:
 				raise InvalidCredentialsError
 
-			new_access_token = generate_access_token(
+			new_access_token: str = generate_access_token(
 				user_id=str(user.id), role=user.role.value
 			)
 			new_refresh_token_str, expires_at = generate_refresh_token()
@@ -147,9 +140,8 @@ class AuthUsecase:
 		except (TokenRevokedError, InvalidCredentialsError):
 			raise
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
-			)
+			logger.error(f"SQLAlchemy error in refresh: {exc}")
+			raise DBOperationError
 
 	async def logout(self, refresh_token_str: str) -> None:
 		try:
@@ -164,9 +156,8 @@ class AuthUsecase:
 					transaction=transaction,
 				)
 		except SQLAlchemyError as exc:
-			raise DBOperationError(
-				message=f"SQLAlchemy error occurred in {self._method_path()}: {exc}"
-			)
+			logger.error(f"SQLAlchemy error in logout: {exc}")
+			raise DBOperationError
 
 	async def me(self, user: UserModel) -> UserOutSchema:
 		return UserOutSchema.model_validate(user)

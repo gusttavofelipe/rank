@@ -27,17 +27,32 @@ type LogLevel = int
 
 # ── Level sets ────────────────────────────────────────────────────────────────
 
-# Levels that expose call-site information and full stack traces.
-_VERBOSE_LEVELS: frozenset[LogLevel] = frozenset(
+# Levels that include full stack traces.
+_TRACEBACK_LEVELS: frozenset[LogLevel] = frozenset(
 	{logging.DEBUG, logging.ERROR, logging.CRITICAL}
 )
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
 
+def _is_project_code(record: logging.LogRecord) -> bool:
+	"""True when the log record originates from the project's own code,
+	not from a third-party library in .venv or site-packages."""
+	try:
+		rel: Path = Path(record.pathname).relative_to(Path.cwd())
+		return not str(rel).startswith(".venv")
+	except ValueError:
+		return False
+
+
 def _needs_location(record: logging.LogRecord) -> bool:
-	"""True when the record should include file / line / function context."""
-	return record.levelno in _VERBOSE_LEVELS or bool(record.exc_info)
+	"""Show call site for all levels, but only for project code."""
+	return _is_project_code(record)
+
+
+def _needs_traceback(record: logging.LogRecord) -> bool:
+	"""True when a full stack trace should be appended."""
+	return record.levelno in _TRACEBACK_LEVELS or bool(record.exc_info)
 
 
 def _get_location(record: logging.LogRecord) -> str:
@@ -154,7 +169,7 @@ class PrettyFormatter(logging.Formatter):
 			line = f"{ts_s} {lvl_s} {msg_s}{ctx_s}"
 
 		exc: str | None = _format_exc(record)
-		if exc:
+		if exc and _needs_traceback(record):
 			return f"{line}\n{self.DIM}{exc}{self.RESET}"
 		return line
 
@@ -186,13 +201,14 @@ class JSONFormatter(logging.Formatter):
 		if _needs_location(record):
 			payload["location"] = _get_location(record)
 
+		if _needs_traceback(record):
+			exc: str | None = _format_exc(record)
+			if exc:
+				payload["exc_info"] = exc
+
 		# Merge context fields (request_id, user_id, etc.) into the top level.
 		ctx: ContextData = get_context()
 		if ctx:
 			payload |= ctx  # type: ignore[arg-type]
-
-		exc: str | None = _format_exc(record)
-		if exc:
-			payload["exc_info"] = exc
 
 		return json.dumps(payload, ensure_ascii=False, default=str)

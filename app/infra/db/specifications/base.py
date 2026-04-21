@@ -29,8 +29,8 @@ class AndSpecification[ModelT: DeclarativeBaseModel](Specification[ModelT]):
 		left: Specification[ModelT],
 		right: Specification[ModelT],
 	) -> None:
-		self.left = left
-		self.right = right
+		self.left: Specification[ModelT] = left
+		self.right: Specification[ModelT] = right
 
 	def apply(self, query: Select[tuple[ModelT]]) -> Select[tuple[ModelT]]:
 		return self.right.apply(self.left.apply(query))
@@ -42,8 +42,8 @@ class OrSpecification[ModelT: DeclarativeBaseModel](Specification[ModelT]):
 		left: Specification[ModelT],
 		right: Specification[ModelT],
 	) -> None:
-		self.left = left
-		self.right = right
+		self.left: Specification[ModelT] = left
+		self.right: Specification[ModelT] = right
 
 	def apply(self, query: Select[tuple[ModelT]]) -> Select[tuple[ModelT]]:
 		base: type[ModelT] = query.column_descriptions[0]["entity"]
@@ -63,7 +63,7 @@ class OrSpecification[ModelT: DeclarativeBaseModel](Specification[ModelT]):
 
 class NotSpecification[ModelT: DeclarativeBaseModel](Specification[ModelT]):
 	def __init__(self, spec: Specification[ModelT]) -> None:
-		self.spec = spec
+		self.spec: Specification[ModelT] = spec
 
 	def apply(self, query: Select[tuple[ModelT]]) -> Select[tuple[ModelT]]:
 		base: type[ModelT] = query.column_descriptions[0]["entity"]

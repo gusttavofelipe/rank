@@ -1,4 +1,5 @@
-# app/api/v1/dependencies/auth.py
+"""app/api/v1/dependencies/auth.py"""
+
 import uuid
 from typing import Annotated
 
