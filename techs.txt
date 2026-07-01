@@ -13,3 +13,59 @@ enhance and use:
     Feature flags
     Rate limiter
     Redis
+
+
+import asyncio
+import logging
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception
+
+logger = logging.getLogger(__name__)
+
+
+def should_retry(exc: BaseException) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return isinstance(exc, (httpx.ConnectError, httpx.TimeoutException))
+
+
+class APIClient:
+    def __init__(self, base_url: str, timeout: float = 10.0, **client_kwargs):
+        self.client = httpx.AsyncClient(base_url=base_url, timeout=timeout, **client_kwargs)
+
+    @retry(
+        stop=stop_after_attempt(4),
+        wait=wait_exponential_jitter(initial=1, max=15),
+        retry=retry_if_exception(should_retry),
+        reraise=True,
+    )
+    async def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        resp = await self.client.request(method, url, **kwargs)
+        resp.raise_for_status()
+        return resp
+
+    async def get(self, url: str, **kwargs) -> httpx.Response:
+        return await self._request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs) -> httpx.Response:
+        return await self._request("POST", url, **kwargs)
+
+    async def aclose(self):
+        await self.client.aclose()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        await self.aclose()
+
+
+async def main():
+    logging.basicConfig(level=logging.INFO)
+    async with APIClient("https://api.exemplo.com") as api:
+        resp = await api.get("/dados", params={"id": 123})
+        print(resp.json())
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
