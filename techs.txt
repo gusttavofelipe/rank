@@ -15,12 +15,8 @@ enhance and use:
     Redis
 
 
-import asyncio
-import logging
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception
-
-logger = logging.getLogger(__name__)
 
 
 def should_retry(exc: BaseException) -> bool:
@@ -53,19 +49,65 @@ class APIClient:
     async def aclose(self):
         await self.client.aclose()
 
-    async def __aenter__(self):
-        return self
+----
 
-    async def __aexit__(self, *exc):
-        await self.aclose()
+from clients.api_client import APIClient
 
 
-async def main():
-    logging.basicConfig(level=logging.INFO)
-    async with APIClient("https://api.exemplo.com") as api:
-        resp = await api.get("/dados", params={"id": 123})
-        print(resp.json())
+class ProcessarPedidoUseCase:
+    def __init__(self, cep_client: APIClient):
+        self.cep_client = cep_client
+
+    async def executar(self, cep: str, valor: float, itens: list[str]) -> dict:
+        if valor <= 0:
+            raise ValueError("Valor do pedido deve ser positivo")
+
+        endereco = await self._buscar_endereco(cep)  # chamada de API escondida aqui dentro
+
+        frete = self._calcular_frete(endereco["uf"], valor)
+
+        return {
+            "cidade": endereco["localidade"],
+            "estado": endereco["uf"],
+            "valor": valor,
+            "frete": frete,
+            "total": valor + frete,
+            "itens": itens,
+        }
+
+    async def _buscar_endereco(self, cep: str) -> dict:
+        resp = await self.cep_client.get(f"/{cep}/json/")
+        dados = resp.json()
+        if dados.get("erro"):
+            raise ValueError(f"CEP {cep} inválido")
+        return dados
+
+    def _calcular_frete(self, uf: str, valor: float) -> float:
+        if uf in ("SP", "RJ", "MG"):
+            return 10.0
+        return 25.0
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+---
+
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from clients.api_client import APIClient
+from routers.pedidos import router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.cep_client = APIClient(base_url="https://viacep.com.br/ws")
+    yield
+    await app.state.cep_client.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(router)
+
+
+---
+
+
