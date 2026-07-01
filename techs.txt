@@ -13,3 +13,101 @@ enhance and use:
     Feature flags
     Rate limiter
     Redis
+
+
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception
+
+
+def should_retry(exc: BaseException) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return isinstance(exc, (httpx.ConnectError, httpx.TimeoutException))
+
+
+class APIClient:
+    def __init__(self, base_url: str, timeout: float = 10.0, **client_kwargs):
+        self.client = httpx.AsyncClient(base_url=base_url, timeout=timeout, **client_kwargs)
+
+    @retry(
+        stop=stop_after_attempt(4),
+        wait=wait_exponential_jitter(initial=1, max=15),
+        retry=retry_if_exception(should_retry),
+        reraise=True,
+    )
+    async def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        resp = await self.client.request(method, url, **kwargs)
+        resp.raise_for_status()
+        return resp
+
+    async def get(self, url: str, **kwargs) -> httpx.Response:
+        return await self._request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs) -> httpx.Response:
+        return await self._request("POST", url, **kwargs)
+
+    async def aclose(self):
+        await self.client.aclose()
+
+----
+
+from clients.api_client import APIClient
+
+
+class ProcessarPedidoUseCase:
+    def __init__(self, cep_client: APIClient):
+        self.cep_client = cep_client
+
+    async def executar(self, cep: str, valor: float, itens: list[str]) -> dict:
+        if valor <= 0:
+            raise ValueError("Valor do pedido deve ser positivo")
+
+        endereco = await self._buscar_endereco(cep)  # chamada de API escondida aqui dentro
+
+        frete = self._calcular_frete(endereco["uf"], valor)
+
+        return {
+            "cidade": endereco["localidade"],
+            "estado": endereco["uf"],
+            "valor": valor,
+            "frete": frete,
+            "total": valor + frete,
+            "itens": itens,
+        }
+
+    async def _buscar_endereco(self, cep: str) -> dict:
+        resp = await self.cep_client.get(f"/{cep}/json/")
+        dados = resp.json()
+        if dados.get("erro"):
+            raise ValueError(f"CEP {cep} inválido")
+        return dados
+
+    def _calcular_frete(self, uf: str, valor: float) -> float:
+        if uf in ("SP", "RJ", "MG"):
+            return 10.0
+        return 25.0
+
+
+---
+
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from clients.api_client import APIClient
+from routers.pedidos import router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.cep_client = APIClient(base_url="https://viacep.com.br/ws")
+    yield
+    await app.state.cep_client.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(router)
+
+
+---
+
+
